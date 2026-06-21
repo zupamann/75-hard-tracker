@@ -50,16 +50,24 @@ if not current_data:
 
 # 1. VODA
 st.subheader("💧 1. Hidratacija")
-trenutna_voda = float(current_data.get("voda_l", 0.0))
+
+# Koristimo Streamlit Session State kako bi aplikacija zapamtila unose kroz dan prije konačnog spremanja
+if "voda_session" not in st.session_state:
+    st.session_state["voda_session"] = float(current_data.get("voda_l", 0.0))
+
+trenutna_voda = st.session_state["voda_session"]
 voda_status = "✅ Ispunjeno" if trenutna_voda >= 3.8 else "❌ Nedovoljno (Cilj: 3.8L)"
 st.metric(label=f"Status: {voda_status}", value=f"{trenutna_voda} L")
+
 dodaj_vodu = st.number_input("Dodaj vodu (L):", min_value=0.0, max_value=4.0, step=0.1, value=0.0, key="voda_input")
+
 if st.button("Upiši vodu 💧"):
-    trenutna_voda = round(trenutna_voda + dodaj_vodu, 2)
-    st.rerun()
-
-st.write("---")
-
+    if dodaj_vodu > 0.0:
+        # Pribroji vodu u privremenu memoriju
+        st.session_state["voda_session"] = round(trenutna_voda + dodaj_vodu, 2)
+        st.success(f"Dodano {dodaj_vodu}L! Ne zaboravi kliknuti 'SPREMI DANAŠNJI NAPREDAK' na dnu prije izlaska.")
+        st.rerun()
+        
 # 2. CARDIO TRENING
 st.subheader("🏃‍♂️ 2. Kardio Trening (Min. 45 min)")
 c_tip = st.selectbox("Način vježbe:", ["Hodanje", "Trčanje", "Bicikl", "Košarka"], index=["Hodanje", "Trčanje", "Bicikl", "Košarka"].index(current_data.get("cardio_tip", "Hodanje")))
