@@ -132,8 +132,8 @@ if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", use_container_width=True):
     row_data = [
         today_str,
         current_day,
-        trenutna_voda,
-        header_frame_fix_type := c_tip,
+        st.session_state["voda_session"],  # <--- OVA LINIJA MORA BITI OVAKVA
+        c_tip,
         c_vrijeme,
         c_avg,
         c_max,
@@ -148,7 +148,6 @@ if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", use_container_width=True):
         1 if slika else 0,
         status_dana
     ]
-    
     if existing_row:
         worksheet.update(range_name=f"A{existing_row}:Q{existing_row}", values=[row_data])
     else:
