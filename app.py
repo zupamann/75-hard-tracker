@@ -12,9 +12,9 @@ try:
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
 except Exception as e:
-    st.error("Problem sa spajanjem na Google Sheets. Provjeri Secrets postavke.")
+    st.error(f"Problem sa spajanjem na Google Sheets: {e}")
     st.stop()
-
+    
 # --- LOGIKA DATUMA ---
 # Budući da je izazov počeo u petak 19.6.2026.
 START_DATE = datetime.date(2026, 6, 19)
