@@ -7,7 +7,7 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
-    SHEET_URL = "TVOJ_GOOGLE_SHEETS_LINK_OVDJE"
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85ZljCXyKFewpwLotx1-fs/edit?usp=sharing"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
