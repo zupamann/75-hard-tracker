@@ -74,7 +74,8 @@ c_tip = st.selectbox("Način vježbe:", ["Hodanje", "Trčanje", "Bicikl", "Koša
 c_vrijeme = st.number_input("Vrijeme (min):", min_value=0, max_value=300, value=int(current_data.get("cardio_vrijeme", 0)))
 
 if c_tip == "Košarka":
-    c_avg = st.number_input("Tempo (npr. lagan, jak, intenzivan):", value=0.0, description="Ovdje upiši subjektivni tempo ako želiš, ili ostavi 0")
+    # Mijenjamo label da sadrži uputu, uklonjen nepostojeći parametar description
+    c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=float(current_data.get("cardio_avg_brzina", 0.0)))
     c_max = 0.0
 else:
     c_avg = st.number_input("Srednja brzina (km/h):", min_value=0.0, max_value=100.0, value=float(current_data.get("cardio_avg_brzina", 0.0)))
