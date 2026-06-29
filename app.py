@@ -7,8 +7,8 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
-    # ⚠️ PAŽNJA: Ovdje obavezno ponovo stavi link SVOJE tablice!
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85ZljCXyKFewpwLotx1-fs/edit?usp=sharing"
+    # ⚠️ Ovdje ponovo stavi link SVOJE tablice!
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpT0EhzbhaTch9uA85Z1jCXyKFewpwLotx1-fs/"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
@@ -22,7 +22,6 @@ def get_cached_records():
     return worksheet.get_all_records()
 
 # --- LOGIKA RESTARTA I DATUMA ---
-# Postavljamo Dan 1 na današnji datum: 29.06.2026.
 if "start_date_env" not in st.session_state:
     st.session_state["start_date_env"] = datetime.date(2026, 6, 29)
 
@@ -44,7 +43,6 @@ for idx, record in enumerate(all_records):
         current_data = record
         break
 
-# Ako nema podataka u bazi za danas, postavi prazno
 if not current_data:
     current_data = {
         "voda_l": 0.0, "cardio_tip": "", "cardio_vrijeme": "", "cardio_avg_brzina": "", "cardio_max_brzina": "",
@@ -53,19 +51,27 @@ if not current_data:
         "citanje": 0, "slika": 0
     }
 
-# --- INICIJALIZACIJA SESSION STATE-A ZA ZBRAJANJE KROZ DAN ---
+# --- INICIJALIZACIJA SESSION STATE-A ---
 if "voda_session" not in st.session_state:
     st.session_state["voda_session"] = float(current_data.get("voda_l", 0.0))
 
 if "cardio_list" not in st.session_state:
-    # Ako već postoje treninzi u bazi za danas, učitaj ih, inače prazna lista
     c_tips = str(current_data.get("cardio_tip", "")).split(" | ") if current_data.get("cardio_tip") else []
     c_mins = str(current_data.get("cardio_vrijeme", "")).split(" | ") if current_data.get("cardio_vrijeme") else []
+    c_avgs = str(current_data.get("cardio_avg_brzina", "")).split(" | ") if current_data.get("cardio_avg_brzina") else []
+    c_maxs = str(current_data.get("cardio_max_brzina", "")).split(" | ") if current_data.get("cardio_max_brzina") else []
     
     st.session_state["cardio_list"] = []
-    for t, m in zip(c_tips, c_mins):
-        if t and m:
-            st.session_state["cardio_list"].append({"tip": t, "min": int(m)})
+    for i in range(max(len(c_tips), len(c_mins))):
+        try:
+            t = c_tips[i] if i < len(c_tips) else "Hodanje"
+            m = int(c_mins[i]) if i < len(c_mins) and c_mins[i] else 0
+            a = float(c_avgs[i]) if i < len(c_avgs) and c_avgs[i] else 0.0
+            mx = float(c_maxs[i]) if i < len(c_maxs) and c_maxs[i] else 0.0
+            if t or m > 0:
+                st.session_state["cardio_list"].append({"tip": t, "min": m, "avg": a, "max": mx})
+        except:
+            pass
 
 # ==========================================
 # 🟢 TAB 1: DANAS
@@ -74,7 +80,6 @@ with tab_danas:
     st.markdown(f"<h1 style='text-align: center;'>⚡ 75 HARD PRO — DAN {current_day}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
     
-    # Gumb za brzi ručni restart ako zatreba
     if st.button("🔄 Restartaj izazov na Dan 1 (Danas)", type="secondary"):
         st.session_state["start_date_env"] = today
         st.success("Izazov uspješno restartan! Danas je Dan 1.")
@@ -99,16 +104,18 @@ with tab_danas:
 
     st.write("---")
 
-    # 2. MULTI-CARDIO SEKCIJA
+    # 2. MULTI-CARDIO SEKCIJA S BRZINAMA
     st.markdown("### 🏃‍♂️ 2. Kardio Trening (Min. 45 min ukupno)")
     
-    # Prikaz trenutno dodanih kardio treninga za danas
     ukupno_cardio_min = sum([trening["min"] for trening in st.session_state["cardio_list"]])
     
     if st.session_state["cardio_list"]:
         st.write("**Dodani treninzi za danas:**")
-        for i, t in enumerate(st.session_state["cardio_list"]):
-            st.info(f"🏋️‍♂️ {t['tip']}: **{t['min']} min**")
+        for t in st.session_state["cardio_list"]:
+            if t['tip'] == "Košarka":
+                st.info(f"🏀 {t['tip']}: **{t['min']} min** | Tempo/Intenzitet: {t['avg']}")
+            else:
+                st.info(f"🏃‍♂️ {t['tip']}: **{t['min']} min** | Srednja: {t['avg']} km/h | Max: {t['max']} km/h")
     else:
         st.write("*Nema dodanih kardio treninga za danas.*")
         
@@ -118,20 +125,27 @@ with tab_danas:
     else:
         st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Kardio status: U TIJEKU (Trenutno: {ukupno_cardio_min} min | Fali ti još {max(0, 45 - ukupno_cardio_min)} min)</span>", unsafe_allow_html=True)
 
-    # Formular za dodavanje novog kardio treninga u listu
-    st.markdown("#### Dodaj kardio sesiju:")
+    st.markdown("#### Dodaj novu sesiju:")
     c_tip = st.selectbox("Način vježbe:", ["Hodanje", "Trčanje", "Bicikl", "Košarka"])
-    c_vrijeme = st.number_input("Vrijeme ove sesije (min):", min_value=0, max_value=300, value=0, key="cardio_min_input")
+    c_vrijeme = st.number_input("Vrijeme vježbe (min):", min_value=0, max_value=300, value=0, key="cardio_min_input")
+    
+    # Dinamička polja ovisno o odabranom sportu
+    if c_tip == "Košarka":
+        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0.0, key="c_avg_input")
+        c_max = 0.0
+    else:
+        c_avg = st.number_input("Srednja brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_avg_input")
+        c_max = st.number_input("Maksimalna brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_max_input")
     
     col1, col2 = st.columns(2)
     with col1:
-        btn_add_cardio = st.button("Dodaj ovaj kardio u dan ➕")
+        btn_add_cardio = st.button("Dodaj ovaj kardio ➕")
     with col2:
-        btn_clear_cardio = st.button("Očisti kardio listu 🗑️")
+        btn_clear_cardio = st.button("Očisti listu kardija 🗑️")
 
     if btn_add_cardio and c_vrijeme > 0:
-        st.session_state["cardio_list"].append({"tip": c_tip, "min": c_vrijeme})
-        st.success(f"Dodano: {c_tip} u trajanju od {c_vrijeme} min!")
+        st.session_state["cardio_list"].append({"tip": c_tip, "min": c_vrijeme, "avg": c_avg, "max": c_max})
+        st.success(f"Uspješno dodano: {c_tip}!")
         st.rerun()
         
     if btn_clear_cardio:
@@ -181,13 +195,14 @@ with tab_danas:
     status_dana = "SUCCESS" if izazov_prolaz else "INCOMPLETE"
 
     if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", use_container_width=True):
-        # Spajamo listu kardio treninga u tekstualni format rastavljen znakom " | " za bazu
         cardio_tipovi_str = " | ".join([x["tip"] for x in st.session_state["cardio_list"]])
         cardio_minute_str = " | ".join([str(x["min"]) for x in st.session_state["cardio_list"]])
+        cardio_avg_str = " | ".join([str(x["avg"]) for x in st.session_state["cardio_list"]])
+        cardio_max_str = " | ".join([str(x["max"]) for x in st.session_state["cardio_list"]])
         
         row_data = [
             today_str, current_day, st.session_state["voda_session"],
-            cardio_tipovi_str, cardio_minute_str, "", "", # Brzine ostavljamo prazne zbog multi-unosa
+            cardio_tipovi_str, cardio_minute_str, cardio_avg_str, cardio_max_str,
             s_teretana, s_sklekovi, s_plank,
             p_kcal, p_secer, p_protein, p_kreatin,
             1 if citanje else 0, 1 if slika else 0,
@@ -201,9 +216,9 @@ with tab_danas:
         st.cache_data.clear()
         if izazov_prolaz:
             st.balloons()
-            st.success("Dan je uspješno spremljen kao SUCCESS! 🔥")
+            st.success("Dan spremljen kao SUCCESS! 🔥")
         else:
-            st.warning("Podaci spremljeni, ali dan je INCOMPLETE jer nisu svi uvjeti zadovoljeni.")
+            st.warning("Podaci spremljeni, ali dan ima status INCOMPLETE.")
 
 # ==========================================
 # 📊 TAB 2: POVIJEST & ANALITIKA
@@ -215,7 +230,6 @@ with tab_povijest:
     else:
         import pandas as pd
         df = pd.DataFrame(all_records)
-        
         styled_df = df.copy()
         styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if x == "SUCCESS" else "🔴 INCOMPLETE")
         st.dataframe(styled_df[["datum", "dan", "voda_l", "cardio_tip", "cardio_vrijeme", "dan_status"]], use_container_width=True)
