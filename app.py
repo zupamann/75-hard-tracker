@@ -129,12 +129,12 @@ with tab_danas:
     c_tip = st.selectbox("Način vježbe:", ["Hodanje", "Trčanje", "Bicikl", "Košarka"])
     c_vrijeme = st.number_input("Vrijeme vježbe (min):", min_value=0, max_value=300, value=0, key="cardio_min_input")
     
-    # Dinamička polja ovisno o odabranom sportu
+    # Dinamička polja ovisno o odabranom sport
     if c_tip == "Košarka":
-        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0.0, key="c_avg_input")
+        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0.0, key="c_avg_kosarka")
         c_max = 0.0
     else:
-        c_avg = st.number_input("Srednja brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_avg_input")
+        c_avg = st.number_input("Srednja brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_avg_ostalo")
         c_max = st.number_input("Maksimalna brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_max_input")
     
     col1, col2 = st.columns(2)
