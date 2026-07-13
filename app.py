@@ -230,6 +230,18 @@ with tab_povijest:
     else:
         import pandas as pd
         df = pd.DataFrame(all_records)
+        
+        # POPRAVAK: Prisilno pretvaramo prazne tekstove u nule/prazno za problematične stupce
+        # kako PyArrow ne bi bacao grešku prilikom renderiranja tablice
+        for col in ["voda_l", "cardio_vrijeme", "snaga_teretana_min", "snaga_sklekovi_kom", "snaga_plank_min"]:
+            if col in df.columns:
+                # Zamijeni prazne stringove s '0' i pretvori u tekstualni objekt radi multi-zapisa
+                df[col] = df[col].replace("", "0").astype(str)
+        
         styled_df = df.copy()
-        styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if x == "SUCCESS" else "🔴 INCOMPLETE")
-        st.dataframe(styled_df[["datum", "dan", "voda_l", "cardio_tip", "cardio_vrijeme", "dan_status"]], use_container_width=True)
+        if "dan_status" in styled_df.columns:
+            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if x == "SUCCESS" else "🔴 INCOMPLETE")
+        
+        # Prikaz tablice sa sigurnim formatom
+        prikaz_stupaca = [c for c in ["datum", "dan", "voda_l", "cardio_tip", "cardio_vrijeme", "dan_status"] if c in styled_df.columns]
+        st.dataframe(styled_df[prikaz_stupaca], width='stretch')
