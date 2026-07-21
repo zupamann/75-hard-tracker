@@ -22,11 +22,12 @@ def get_cached_records():
     return worksheet.get_all_records()
 
 # --- LOGIKA RESTARTA I DATUMA ---
-if "start_date_env" not in st.session_state:
-    st.session_state["start_date_env"] = datetime.date(2026, 6, 29)
+# Ako nema spremljenog startnog datuma, postavi današnji datum kao default
+if "custom_start_date" not in st.session_state:
+    st.session_state["custom_start_date"] = datetime.date.today()
 
 today = datetime.date.today()
-current_day = (today - st.session_state["start_date_env"]).days + 1
+current_day = (today - st.session_state["custom_start_date"]).days + 1
 
 # --- TABS ZA NAVIGACIJU ---
 tab_danas, tab_povijest = st.tabs(["📝 Danas", "📊 Povijest & Analitika"])
@@ -81,8 +82,8 @@ with tab_danas:
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
     
     if st.button("🔄 Restartaj izazov na Dan 1 (Danas)", type="secondary"):
-        st.session_state["start_date_env"] = today
-        st.success("Izazov uspješno restartan! Danas je Dan 1.")
+        st.session_state["custom_start_date"] = datetime.date.today()
+        st.success("Izazov uspješno restartan na Dan 1!")
         st.rerun()
         
     st.write("---")
