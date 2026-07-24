@@ -21,13 +21,16 @@ except Exception as e:
 def get_cached_records():
     return worksheet.get_all_records()
 
-# --- LOGIKA RESTARTA I DATUMA ---
-# Ako nema spremljenog startnog datuma, postavi današnji datum kao default
-if "custom_start_date" not in st.session_state:
-    st.session_state["custom_start_date"] = datetime.date.today()
+# --- LOGIKA DATUMA ---
+# Postavi datum onog dana kada si ponovno pokrenuo izazov (npr. danas, 24.07.2026.)
+START_DATE = datetime.date(2026, 7, 24) 
 
 today = datetime.date.today()
-current_day = (today - st.session_state["custom_start_date"]).days + 1
+current_day = (today - START_DATE).days + 1
+
+# Sigurnosna kočnica ako je datum slučajno u budućnosti
+if current_day < 1:
+    current_day = 1
 
 # --- TABS ZA NAVIGACIJU ---
 tab_danas, tab_povijest = st.tabs(["📝 Danas", "📊 Povijest & Analitika"])
