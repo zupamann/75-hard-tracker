@@ -22,8 +22,8 @@ def get_cached_records():
     return worksheet.get_all_records()
 
 # --- LOGIKA DATUMA ---
-# Postavi datum onog dana kada si ponovno pokrenuo izazov (npr. danas, 24.07.2026.)
-START_DATE = datetime.date(2026, 7, 24) 
+# Postavi datum onog dana kada si ponovno pokrenuo izazov (npr. danas, 27.07.2026.)
+START_DATE = datetime.date(2026, 7, 27) 
 
 today = datetime.date.today()
 current_day = (today - START_DATE).days + 1
