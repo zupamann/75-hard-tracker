@@ -7,11 +7,18 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
-    # ⚠️ Ovdje ponovo stavi link SVOJE tablice!
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85ZljCXyKFewpwLotx1-fs/edit?usp=sharing"
+    # ⚠️ Ovdje stavi link SVOJE tablice!
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpT0EhzbhaTch9uA85Z1jCXyKFewpwLotx1-fs/"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
+    
+    # Pokušaj otvaranja ili kreiranja drugog taba za NNN logove
+    try:
+        nnn_worksheet = sh.worksheet("NNN_Log")
+    except:
+        nnn_worksheet = sh.add_worksheet(title="NNN_Log", rows="100", cols="3")
+        nnn_worksheet.append_row(["relaps_datum", "relaps_vrijeme", "prethodni_streak_dana"])
 except Exception as e:
     st.error(f"Problem sa spajanjem na Google Sheets: {e}")
     st.stop()
@@ -21,21 +28,41 @@ except Exception as e:
 def get_cached_records():
     return worksheet.get_all_records()
 
-# --- LOGIKA DATUMA ---
-# Postavi datum onog dana kada si ponovno pokrenuo izazov (npr. danas, 27.07.2026.)
-START_DATE = datetime.date(2026, 9, 16) 
+@st.cache_data(ttl=30)
+def get_cached_nnn():
+    try:
+        return nnn_worksheet.get_all_records()
+    except:
+        return []
 
+# --- LOGIKA DATUMA (75 HARD) ---
+# Fiksni početak izazova na današnji datum
+START_DATE = datetime.date(2026, 9, 28)
 today = datetime.date.today()
 current_day = (today - START_DATE).days + 1
-
-# Sigurnosna kočnica ako je datum slučajno u budućnosti
 if current_day < 1:
     current_day = 1
+
+# --- LOGIKA NNN STREAKA ---
+nnn_records = get_cached_nnn()
+
+if "nnn_last_relapse" not in st.session_state:
+    if nnn_records:
+        # Uzimamo zadnji upisani relaps iz baze
+        last_entry = nnn_records[-1].get("relaps_datum")
+        try:
+            st.session_state["nnn_last_relapse"] = datetime.datetime.strptime(str(last_entry), "%Y-%m-%d").date()
+        except:
+            st.session_state["nnn_last_relapse"] = today
+    else:
+        st.session_state["nnn_last_relapse"] = today
+
+nnn_streak_days = (today - st.session_state["nnn_last_relapse"]).days
 
 # --- TABS ZA NAVIGACIJU ---
 tab_danas, tab_povijest = st.tabs(["📝 Danas", "📊 Povijest & Analitika"])
 
-# Učitavanje podataka iz baze
+# Učitavanje podataka iz baze za 75 Hard
 all_records = get_cached_records()
 today_str = today.strftime("%Y-%m-%d")
 existing_row = None
@@ -83,12 +110,32 @@ if "cardio_list" not in st.session_state:
 with tab_danas:
     st.markdown(f"<h1 style='text-align: center;'>⚡ 75 HARD PRO — DAN {current_day}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
+    st.write("---")
+
+    # 🔥 NNN / STREAK TRACKER SEKCIJA
+    st.subheader("🔥 NNN Tracker")
+    col_nnn1, col_nnn2 = st.columns([2, 1])
     
-    if st.button("🔄 Restartaj izazov na Dan 1 (Danas)", type="secondary"):
-        st.session_state["custom_start_date"] = datetime.date.today()
-        st.success("Izazov uspješno restartan na Dan 1!")
-        st.rerun()
+    with col_nnn1:
+        st.metric(label="Trenutni Streak", value=f"{nnn_streak_days} dana")
+        st.caption(f"Zadnji relaps: {st.session_state['nnn_last_relapse'].strftime('%d.%m.%Y.')}")
         
+    with col_nnn2:
+        if st.button("🚨 RELAPS", type="primary", width='stretch'):
+            prev_streak = nnn_streak_days
+            st.session_state["nnn_last_relapse"] = today
+            
+            # Zapisivanje u posebnu tablicu u Google Sheetu
+            try:
+                now_str = datetime.datetime.now().strftime("%H:%M:%S")
+                nnn_worksheet.append_row([today_str, now_str, prev_streak])
+                st.cache_data.clear()
+            except Exception as ex:
+                st.error(f"Greška kod spremanja NNN relapsa: {ex}")
+                
+            st.warning("Streak je resetiran na 0 dana. Glavu gore, idemo dalje!")
+            st.rerun()
+
     st.write("---")
 
     # 1. VODA SEKCIJA
@@ -133,7 +180,6 @@ with tab_danas:
     c_tip = st.selectbox("Način vježbe:", ["Hodanje", "Trčanje", "Bicikl", "Košarka"])
     c_vrijeme = st.number_input("Vrijeme vježbe (min):", min_value=0, max_value=300, value=0, key="cardio_min_input")
     
-    # Dinamička polja ovisno o odabranom sport
     if c_tip == "Košarka":
         c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0.0, key="c_avg_kosarka")
         c_max = 0.0
@@ -198,7 +244,7 @@ with tab_danas:
     izazov_prolaz = voda_ok and kardio_ok and snaga_ok and prehrana_ok and citanje and slika
     status_dana = "SUCCESS" if izazov_prolaz else "INCOMPLETE"
 
-    if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", use_container_width=True):
+    if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", width='stretch'):
         cardio_tipovi_str = " | ".join([x["tip"] for x in st.session_state["cardio_list"]])
         cardio_minute_str = " | ".join([str(x["min"]) for x in st.session_state["cardio_list"]])
         cardio_avg_str = " | ".join([str(x["avg"]) for x in st.session_state["cardio_list"]])
@@ -229,23 +275,28 @@ with tab_danas:
 # ==========================================
 with tab_povijest:
     st.header("📊 Pregled Povijesti")
+    
+    st.subheader("🔥 NNN Povijest Relapsa")
+    if nnn_records:
+        import pandas as pd
+        df_nnn = pd.DataFrame(nnn_records).astype(str)
+        st.dataframe(df_nnn.rename(columns={"relaps_datum": "Datum", "relaps_vrijeme": "Vrijeme", "prethodni_streak_dana": "Srušeni Streak (dana)"}), width='stretch')
+    else:
+        st.info("Nema zabilježenih relapsa u bazi. Samo jako! 🔥")
+        
+    st.write("---")
+    
+    st.subheader("📋 75 Hard Dnevnik")
     if not all_records:
         st.info("Još nema spremljenih podataka u tablici.")
     else:
         import pandas as pd
-        df = pd.DataFrame(all_records)
-        
-        # POPRAVAK: Prisilno pretvaramo prazne tekstove u nule/prazno za problematične stupce
-        # kako PyArrow ne bi bacao grešku prilikom renderiranja tablice
-        for col in ["voda_l", "cardio_vrijeme", "snaga_teretana_min", "snaga_sklekovi_kom", "snaga_plank_min"]:
-            if col in df.columns:
-                # Zamijeni prazne stringove s '0' i pretvori u tekstualni objekt radi multi-zapisa
-                df[col] = df[col].replace("", "0").astype(str)
+        df = pd.DataFrame(all_records).astype(str)
+        df = df.replace("", "-").replace("nan", "-")
         
         styled_df = df.copy()
         if "dan_status" in styled_df.columns:
-            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if x == "SUCCESS" else "🔴 INCOMPLETE")
+            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if "SUCCESS" in str(x) else "🔴 INCOMPLETE")
         
-        # Prikaz tablice sa sigurnim formatom
         prikaz_stupaca = [c for c in ["datum", "dan", "voda_l", "cardio_tip", "cardio_vrijeme", "dan_status"] if c in styled_df.columns]
         st.dataframe(styled_df[prikaz_stupaca], width='stretch')
