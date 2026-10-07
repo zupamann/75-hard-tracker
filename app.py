@@ -43,21 +43,32 @@ current_day = (today - START_DATE).days + 1
 if current_day < 1:
     current_day = 1
 
-# --- LOGIKA NNN STREAKA ---
-nnn_records = get_cached_nnn()
+# 🔥 NNN / STREAK TRACKER SEKCIJA
+    st.subheader("🔥 NNN Tracker")
+    col_nnn1, col_nnn2 = st.columns([2, 1])
+    
+    with col_nnn1:
+        # Prikaz ukupnih sati te preračunatih dana i sati
+        st.metric(label="Čist od zadnjeg relapsa:", value=f"{total_hours} h", delta=f"{days}d {remaining_hours}h")
+        st.caption(f"Zadnji relaps: {st.session_state['nnn_last_relapse'].strftime('%d.%m.%Y. u %H:%M')}")
+        
+    with col_nnn2:
+        if st.button("🚨 RELAPS", type="primary", width='stretch'):
+            st.session_state["nnn_last_relapse"] = datetime.datetime.now()
+            
+            # Zapisivanje točnog datuma i vremena u Google Sheet
+            try:
+                relapse_date_str = st.session_state["nnn_last_relapse"].strftime("%Y-%m-%d")
+                relapse_time_str = st.session_state["nnn_last_relapse"].strftime("%H:%M:%S")
+                nnn_worksheet.append_row([relapse_date_str, relapse_time_str, f"{total_hours} sati ({days}d {remaining_hours}h)"])
+                st.cache_data.clear()
+            except Exception as ex:
+                st.error(f"Greška kod spremanja NNN relapsa: {ex}")
+                
+            st.warning("Streak je resetiran. Glavu gore, idemo dalje!")
+            st.rerun()
 
-if "nnn_last_relapse" not in st.session_state:
-    if nnn_records:
-        # Uzimamo zadnji upisani relaps iz baze
-        last_entry = nnn_records[-1].get("relaps_datum")
-        try:
-            st.session_state["nnn_last_relapse"] = datetime.datetime.strptime(str(last_entry), "%Y-%m-%d").date()
-        except:
-            st.session_state["nnn_last_relapse"] = today
-    else:
-        st.session_state["nnn_last_relapse"] = today
-
-nnn_streak_days = (today - st.session_state["nnn_last_relapse"]).days
+    st.write("---")
 
 # --- TABS ZA NAVIGACIJU ---
 tab_danas, tab_povijest = st.tabs(["📝 Danas", "📊 Povijest & Analitika"])
