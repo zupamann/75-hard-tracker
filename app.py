@@ -35,7 +35,7 @@ def get_cached_nnn():
         return []
 
 # --- LOGIKA DATUMA (75 HARD) ---
-START_DATE = datetime.date(2026, 10, 7)
+START_DATE = datetime.date(2026, 10, 8)
 today = datetime.date.today()
 now = datetime.datetime.now()
 
