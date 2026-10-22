@@ -7,12 +7,11 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85ZljCXyKFewpwLotx1-fs/edit?usp=sharing"
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85Z1jCXyKFewpwLotx1-fs/edit?usp=sharing"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
     
-    # Pokušaj otvaranja ili kreiranja drugog taba za NNN logove
     try:
         nnn_worksheet = sh.worksheet("NNN_Log")
     except:
@@ -34,11 +33,30 @@ def get_cached_nnn():
     except:
         return []
 
-# --- LOGIKA DATUMA (75 HARD) ---
-START_DATE = datetime.date(2026, 10, 22)
+all_records = get_cached_records()
 today = datetime.date.today()
 now = datetime.datetime.now()
 
+# --- AUTOMATSKI RESET NA DAN 1 AKO JE BILO NEUSPJEŠNIH DANA ---
+BASE_START_DATE = datetime.date(2026, 10, 22)
+latest_reset_date = BASE_START_DATE
+
+for record in all_records:
+    rec_status = str(record.get("dan_status", "")).upper()
+    rec_datum_str = str(record.get("datum", ""))
+    
+    if "INCOMPLETE" in rec_status and rec_datum_str:
+        try:
+            rec_date = datetime.datetime.strptime(rec_datum_str, "%Y-%m-%d").date()
+            if rec_date >= BASE_START_DATE:
+                # Ako je dan bio neuspješan, novi početak je dan iza neuspješnog
+                next_day = rec_date + datetime.timedelta(days=1)
+                if next_day > latest_reset_date:
+                    latest_reset_date = next_day
+        except:
+            pass
+
+START_DATE = latest_reset_date
 current_day = (today - START_DATE).days + 1
 if current_day < 1:
     current_day = 1
@@ -58,7 +76,6 @@ if "nnn_last_relapse" not in st.session_state:
     else:
         st.session_state["nnn_last_relapse"] = now
 
-# Izračun vremenske razlike u satima i danima
 time_diff = now - st.session_state["nnn_last_relapse"]
 total_hours = int(time_diff.total_seconds() // 3600)
 days = total_hours // 24
@@ -67,14 +84,12 @@ remaining_hours = total_hours % 24
 # --- TABS ZA NAVIGACIJU ---
 tab_danas, tab_povijest = st.tabs(["📝 Danas", "📊 Povijest & Analitika"])
 
-# Učitavanje podataka iz baze za 75 Hard
-all_records = get_cached_records()
 today_str = today.strftime("%Y-%m-%d")
 existing_row = None
 current_data = {}
 
 for idx, record in enumerate(all_records):
-    if record.get("datum") == today_str:
+    if str(record.get("datum")) == today_str:
         existing_row = idx + 2
         current_data = record
         break
@@ -83,7 +98,7 @@ if not current_data:
     current_data = {
         "voda_l": 0.0, "cardio_tip": "", "cardio_vrijeme": "", "cardio_avg_brzina": "", "cardio_max_brzina": "",
         "snaga_teretana_min": 0, "snaga_sklekovi_kom": 0, "snaga_plank_min": 0.0,
-        "hrana_kcal": 0, "hrana_secer": 0, "hrana_protein": 0, "hrana_kreatin": 0,
+        "hrana_kcal": 0, "hrana_potroseno_kcal": 0, "hrana_secer": 0, "hrana_protein": 0, "hrana_kreatin": 0,
         "citanje": 0, "slika": 0
     }
 
@@ -115,6 +130,10 @@ if "cardio_list" not in st.session_state:
 with tab_danas:
     st.markdown(f"<h1 style='text-align: center;'>⚡ 75 HARD PRO — DAN {current_day}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
+    
+    if START_DATE > BASE_START_DATE:
+        st.info(f"🔄 Izazov je automatski resetiran na Dan 1 dana {START_DATE.strftime('%d.%m.%Y.')} zbog neuspinješnog dana u povijesti.")
+        
     st.write("---")
 
     # 🔥 NNN / STREAK TRACKER SEKCIJA
@@ -225,18 +244,24 @@ with tab_danas:
 
     st.write("---")
 
-    # 4. PREHRANA SEKCIJA
+    # 4. PREHRANA SEKCIJA (NETO KALORIJE > 1900)
     st.markdown("### 🥩 4. Prehrana & Suplementacija")
-    p_kcal = st.number_input("Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_kcal", 0)))
+    p_kcal = st.number_input("Unesene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_kcal", 0)))
+    p_potroseno = st.number_input("Potrošene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_potroseno_kcal", 0)))
+    
+    neto_kcal = p_kcal - p_potroseno
+    st.metric(label="Neto Kalorije (Unesene - Potrošene):", value=f"{neto_kcal} kcal", delta=f"{neto_kcal - 1900} kcal od cilja (1900)")
+    
     p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
     p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
     p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
 
-    prehrana_ok = p_kcal > 0 or p_protein > 0
+    # UVJET PREHRANE: Neto kalorije moraju biti strogo veće od 1900
+    prehrana_ok = neto_kcal > 1900
     if prehrana_ok:
-        st.markdown("<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: UPISANO</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: PROLAZ (Neto: {neto_kcal} kcal > 1900)</span>", unsafe_allow_html=True)
     else:
-        st.markdown("<span style='color:#dc3545; font-weight:bold;'>🔴 Prehrana status: U TIJEKU</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Prehrana status: NEDOVOLJNO (Neto: {neto_kcal} kcal | Potrebno > 1900 kcal)</span>", unsafe_allow_html=True)
 
     st.write("---")
 
