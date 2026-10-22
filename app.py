@@ -205,4 +205,137 @@ with tab_danas:
     c_vrijeme = st.number_input("Vrijeme vježbe (min):", min_value=0, max_value=300, value=0, key="cardio_min_input")
     
     if c_tip == "Košarka":
-        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0
+        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0.0, key="c_avg_kosarka")
+        c_max = 0.0
+    else:
+        c_avg = st.number_input("Srednja brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_avg_ostalo")
+        c_max = st.number_input("Maksimalna brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_max_input")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        btn_add_cardio = st.button("Dodaj ovaj kardio ➕")
+    with col2:
+        btn_clear_cardio = st.button("Očisti listu kardija 🗑️")
+
+    if btn_add_cardio and c_vrijeme > 0:
+        st.session_state["cardio_list"].append({"tip": c_tip, "min": c_vrijeme, "avg": c_avg, "max": c_max})
+        st.success(f"Uspješno dodano: {c_tip}!")
+        st.rerun()
+        
+    if btn_clear_cardio:
+        st.session_state["cardio_list"] = []
+        st.warning("Lista kardio treninga za danas je ispražnjena.")
+        st.rerun()
+
+    st.write("---")
+
+    # 3. SNAGA SEKCIJA
+    st.markdown("### 🏋️‍♂️ 3. Trening Snage (2 od 3 za prolaz)")
+    s_teretana = st.number_input("Teretana - Vrijeme (min):", min_value=0, max_value=180, value=int(current_data.get("snaga_teretana_min", 0)))
+    s_sklekovi = st.number_input("Sklekovi - Količina (kom):", min_value=0, max_value=500, value=int(current_data.get("snaga_sklekovi_kom", 0)))
+    s_plank = st.number_input("Plank - Vrijeme (min):", min_value=0.0, max_value=60.0, step=0.5, value=float(current_data.get("snaga_plank_min", 0.0)))
+
+    uvjeti_snage = sum([1 for x in [s_teretana, s_sklekovi, s_plank] if x > 0])
+    snaga_ok = uvjeti_snage >= 2
+    if snaga_ok:
+        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Snaga status: GOTOVO ({uvjeti_snage}/3 ispunjeno)</span>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Snaga status: U TIJEKU ({uvjeti_snage}/3 ispunjeno, trebaju ti barem 2)</span>", unsafe_allow_html=True)
+
+    st.write("---")
+
+    # 4. PREHRANA SEKCIJA (NETO KALORIJE > 1900)
+    st.markdown("### 🥩 4. Prehrana & Suplementacija")
+    p_kcal = st.number_input("Unesene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_kcal", 0)))
+    p_potroseno = st.number_input("Potrošene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_potroseno_kcal", 0)))
+    
+    neto_kcal = p_kcal - p_potroseno
+    st.metric(label="Neto Kalorije (Unesene - Potrošene):", value=f"{neto_kcal} kcal", delta=f"{neto_kcal - 1900} kcal od cilja (1900)")
+    
+    p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
+    p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
+    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
+
+    prehrana_ok = neto_kcal > 1900
+    if prehrana_ok:
+        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: PROLAZ (Neto: {neto_kcal} kcal > 1900)</span>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Prehrana status: NEDOVOLJNO (Neto: {neto_kcal} kcal | Potrebno > 1900 kcal)</span>", unsafe_allow_html=True)
+
+    st.write("---")
+
+    # 5. & 6. NAVIKE
+    st.markdown("### 📚 5. & 📸 6. Dnevne Navike")
+    citanje = st.checkbox("Pročitao 10 stranica knjige", value=bool(current_data.get("citanje", 0)))
+    slika = st.checkbox("Napravio fotografiju napretka", value=bool(current_data.get("slika", 0)))
+
+    # SPREMANJE I KONAČNA EVALUACIJA
+    izazov_prolaz = voda_ok and kardio_ok and snaga_ok and prehrana_ok and citanje and slika
+    status_dana = "SUCCESS" if izazov_prolaz else "INCOMPLETE"
+
+    if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", width='stretch'):
+        cardio_tipovi_str = " | ".join([x["tip"] for x in st.session_state["cardio_list"]])
+        cardio_minute_str = " | ".join([str(x["min"]) for x in st.session_state["cardio_list"]])
+        cardio_avg_str = " | ".join([str(x["avg"]) for x in st.session_state["cardio_list"]])
+        cardio_max_str = " | ".join([str(x["max"]) for x in st.session_state["cardio_list"]])
+        
+        row_data = [
+            today_str,
+            current_day,
+            st.session_state["voda_session"],
+            cardio_tipovi_str,
+            cardio_minute_str,
+            cardio_avg_str,
+            cardio_max_str,
+            s_teretana,
+            s_sklekovi,
+            s_plank,
+            p_kcal,
+            p_potroseno,
+            p_secer,
+            p_protein,
+            p_kreatin,
+            1 if citanje else 0,
+            1 if slika else 0,
+            status_dana
+        ]
+        
+        if existing_row:
+            worksheet.update(range_name=f"A{existing_row}:R{existing_row}", values=[row_data])
+        else:
+            worksheet.append_row(row_data)
+            
+        st.cache_data.clear()
+        if izazov_prolaz:
+            st.balloons()
+            st.success("Dan spremljen kao SUCCESS! 🔥")
+        else:
+            st.warning("Podaci spremljeni, ali dan ima status INCOMPLETE.")
+
+# ==========================================
+# 📊 TAB 2: POVIJEST & ANALITIKA
+# ==========================================
+with tab_povijest:
+    st.header("📊 Pregled Povijesti")
+    
+    st.subheader("🔥 NNN Povijest Relapsa")
+    if nnn_records:
+        import pandas as pd
+        df_nnn = pd.DataFrame(nnn_records).astype(str)
+        st.dataframe(df_nnn.rename(columns={"relaps_datum": "Datum", "relaps_vrijeme": "Vrijeme", "prethodni_streak": "Srušeni Streak"}), width='stretch')
+    else:
+        st.info("Nema zabilježenih relapsa u bazi. Samo jako! 🔥")
+        
+    st.write("---")
+    
+    st.subheader("📋 75 Hard Dnevnik")
+    if not all_records:
+        st.info("Još nema spremljenih podataka u tablici.")
+    else:
+        import pandas as pd
+        df = pd.DataFrame(all_records).astype(str)
+        df = df.replace("", "-").replace("nan", "-")
+        
+        styled_df = df.copy()
+        if "dan_status" in styled_df.columns:
+            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if "SUCCESS" in str(
