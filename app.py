@@ -8,7 +8,7 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
     # ⚠️ OVDJE ZALIJEPI LINK SVOJE GOOGLE TABLICE:
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/TVOJ_TOČAN_ID_TABLICE/edit?usp=sharing"
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85ZljCXyKFewpwLotx1-fs/edit?usp=sharing"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
@@ -50,7 +50,6 @@ for record in all_records:
         try:
             rec_date = datetime.datetime.strptime(rec_datum_str, "%Y-%m-%d").date()
             if rec_date >= BASE_START_DATE:
-                # Ako je dan bio neuspješan, novi početak je dan iza neuspješnog
                 next_day = rec_date + datetime.timedelta(days=1)
                 if next_day > latest_reset_date:
                     latest_reset_date = next_day
@@ -133,7 +132,7 @@ with tab_danas:
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
     
     if START_DATE > BASE_START_DATE:
-        st.info(f"🔄 Izazov je automatski resetiran na Dan 1 dana {START_DATE.strftime('%d.%m.%Y.')} zbog neuspinješnog dana u povijesti.")
+        st.info(f"🔄 Izazov je automatski resetiran na Dan 1 dana {START_DATE.strftime('%d.%m.%Y.')} zbog neuspješnog dana u povijesti.")
         
     st.write("---")
 
@@ -206,81 +205,4 @@ with tab_danas:
     c_vrijeme = st.number_input("Vrijeme vježbe (min):", min_value=0, max_value=300, value=0, key="cardio_min_input")
     
     if c_tip == "Košarka":
-        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0.0, key="c_avg_kosarka")
-        c_max = 0.0
-    else:
-        c_avg = st.number_input("Srednja brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_avg_ostalo")
-        c_max = st.number_input("Maksimalna brzina (km/h):", min_value=0.0, max_value=100.0, value=0.0, key="c_max_input")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        btn_add_cardio = st.button("Dodaj ovaj kardio ➕")
-    with col2:
-        btn_clear_cardio = st.button("Očisti listu kardija 🗑️")
-
-    if btn_add_cardio and c_vrijeme > 0:
-        st.session_state["cardio_list"].append({"tip": c_tip, "min": c_vrijeme, "avg": c_avg, "max": c_max})
-        st.success(f"Uspješno dodano: {c_tip}!")
-        st.rerun()
-        
-    if btn_clear_cardio:
-        st.session_state["cardio_list"] = []
-        st.warning("Lista kardio treninga za danas je ispražnjena.")
-        st.rerun()
-
-    st.write("---")
-
-    # 3. SNAGA SEKCIJA
-    st.markdown("### 🏋️‍♂️ 3. Trening Snage (2 od 3 za prolaz)")
-    s_teretana = st.number_input("Teretana - Vrijeme (min):", min_value=0, max_value=180, value=int(current_data.get("snaga_teretana_min", 0)))
-    s_sklekovi = st.number_input("Sklekovi - Količina (kom):", min_value=0, max_value=500, value=int(current_data.get("snaga_sklekovi_kom", 0)))
-    s_plank = st.number_input("Plank - Vrijeme (min):", min_value=0.0, max_value=60.0, step=0.5, value=float(current_data.get("snaga_plank_min", 0.0)))
-
-    uvjeti_snage = sum([1 for x in [s_teretana, s_sklekovi, s_plank] if x > 0])
-    snaga_ok = uvjeti_snage >= 2
-    if snaga_ok:
-        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Snaga status: GOTOVO ({uvjeti_snage}/3 ispunjeno)</span>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Snaga status: U TIJEKU ({uvjeti_snage}/3 ispunjeno, trebaju ti barem 2)</span>", unsafe_allow_html=True)
-
-    st.write("---")
-
-    # 4. PREHRANA SEKCIJA (NETO KALORIJE > 1900)
-    st.markdown("### 🥩 4. Prehrana & Suplementacija")
-    p_kcal = st.number_input("Unesene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_kcal", 0)))
-    p_potroseno = st.number_input("Potrošene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_potroseno_kcal", 0)))
-    
-    neto_kcal = p_kcal - p_potroseno
-    st.metric(label="Neto Kalorije (Unesene - Potrošene):", value=f"{neto_kcal} kcal", delta=f"{neto_kcal - 1900} kcal od cilja (1900)")
-    
-    p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
-    p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
-    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
-
-    # UVJET PREHRANE: Neto kalorije moraju biti strogo veće od 1900
-    prehrana_ok = neto_kcal > 1900
-    if prehrana_ok:
-        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: PROLAZ (Neto: {neto_kcal} kcal > 1900)</span>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Prehrana status: NEDOVOLJNO (Neto: {neto_kcal} kcal | Potrebno > 1900 kcal)</span>", unsafe_allow_html=True)
-
-    st.write("---")
-
-    # 5. & 6. NAVIKE
-    st.markdown("### 📚 5. & 📸 6. Dnevne Navike")
-    citanje = st.checkbox("Pročitao 10 stranica knjige", value=bool(current_data.get("citanje", 0)))
-    slika = st.checkbox("Napravio fotografiju napretka", value=bool(current_data.get("slika", 0)))
-
-    # SPREMANJE I KONAČNA EVALUACIJA
-    izazov_prolaz = voda_ok and kardio_ok and snaga_ok and prehrana_ok and citanje and slika
-    status_dana = "SUCCESS" if izazov_prolaz else "INCOMPLETE"
-
-    if st.button("SPREMI DANAŠNJI NAPREDAK 🚀", width='stretch'):
-        cardio_tipovi_str = " | ".join([x["tip"] for x in st.session_state["cardio_list"]])
-        cardio_minute_str = " | ".join([str(x["min"]) for x in st.session_state["cardio_list"]])
-        cardio_avg_str = " | ".join([str(x["avg"]) for x in st.session_state["cardio_list"]])
-        cardio_max_str = " | ".join([str(x["max"]) for x in st.session_state["cardio_list"]])
-        
-        row_data = [
-            today_str, current_day, st.session_state["voda_session"],
-            cardio_tip
+        c_avg = st.number_input("Tempo / Intenzitet košarke (npr. 1-lagan, 2-jak, 3-intenzivan):", min_value=0.0, value=0
