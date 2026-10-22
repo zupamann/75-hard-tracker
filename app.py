@@ -243,23 +243,24 @@ with tab_danas:
 
     st.write("---")
 
-    # 4. PREHRANA SEKCIJA (NETO KALORIJE > 1900)
+    # 4. PREHRANA SEKCIJA (NETO KALORIJE < 1900)
     st.markdown("### 🥩 4. Prehrana & Suplementacija")
     p_kcal = st.number_input("Unesene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_kcal", 0)))
     p_potroseno = st.number_input("Potrošene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_potroseno_kcal", 0)))
     
     neto_kcal = p_kcal - p_potroseno
-    st.metric(label="Neto Kalorije (Unesene - Potrošene):", value=f"{neto_kcal} kcal", delta=f"{neto_kcal - 1900} kcal od cilja (1900)")
+    st.metric(label="Neto Kalorije (Unesene - Potrošene):", value=f"{neto_kcal} kcal", delta=f"{1900 - neto_kcal} kcal do gornje granice (1900)")
     
     p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
     p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
     p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
 
-    prehrana_ok = neto_kcal > 1900
+    # POPRAVLJEN UVJET: Neto kalorije moraju biti manje od 1900 kcal
+    prehrana_ok = neto_kcal < 1900 and p_kcal > 0
     if prehrana_ok:
-        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: PROLAZ (Neto: {neto_kcal} kcal > 1900)</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: PROLAZ (Neto: {neto_kcal} kcal < 1900)</span>", unsafe_allow_html=True)
     else:
-        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Prehrana status: NEDOVOLJNO (Neto: {neto_kcal} kcal | Potrebno > 1900 kcal)</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Prehrana status: PREKORAČENO / NIJE UNESENO (Neto: {neto_kcal} kcal | Mora biti < 1900 kcal)</span>", unsafe_allow_html=True)
 
     st.write("---")
 
