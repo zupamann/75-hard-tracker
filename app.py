@@ -7,7 +7,8 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85Z1jCXyKFewpwLotx1-fs/edit?usp=sharing"
+    # ⚠️ OVDJE ZALIJEPI LINK SVOJE GOOGLE TABLICE:
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/TVOJ_TOČAN_ID_TABLICE/edit?usp=sharing"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.get_worksheet(0)
@@ -282,51 +283,4 @@ with tab_danas:
         
         row_data = [
             today_str, current_day, st.session_state["voda_session"],
-            cardio_tipovi_str, cardio_minute_str, cardio_avg_str, cardio_max_str,
-            s_teretana, s_sklekovi, s_plank,
-            p_kcal, p_secer, p_protein, p_kreatin,
-            1 if citanje else 0, 1 if slika else 0,
-            status_dana
-        ]
-        if existing_row:
-            worksheet.update(range_name=f"A{existing_row}:Q{existing_row}", values=[row_data])
-        else:
-            worksheet.append_row(row_data)
-            
-        st.cache_data.clear()
-        if izazov_prolaz:
-            st.balloons()
-            st.success("Dan spremljen kao SUCCESS! 🔥")
-        else:
-            st.warning("Podaci spremljeni, ali dan ima status INCOMPLETE.")
-
-# ==========================================
-# 📊 TAB 2: POVIJEST & ANALITIKA
-# ==========================================
-with tab_povijest:
-    st.header("📊 Pregled Povijesti")
-    
-    st.subheader("🔥 NNN Povijest Relapsa")
-    if nnn_records:
-        import pandas as pd
-        df_nnn = pd.DataFrame(nnn_records).astype(str)
-        st.dataframe(df_nnn.rename(columns={"relaps_datum": "Datum", "relaps_vrijeme": "Vrijeme", "prethodni_streak": "Srušeni Streak"}), width='stretch')
-    else:
-        st.info("Nema zabilježenih relapsa u bazi. Samo jako! 🔥")
-        
-    st.write("---")
-    
-    st.subheader("📋 75 Hard Dnevnik")
-    if not all_records:
-        st.info("Još nema spremljenih podataka u tablici.")
-    else:
-        import pandas as pd
-        df = pd.DataFrame(all_records).astype(str)
-        df = df.replace("", "-").replace("nan", "-")
-        
-        styled_df = df.copy()
-        if "dan_status" in styled_df.columns:
-            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if "SUCCESS" in str(x) else "🔴 INCOMPLETE")
-        
-        prikaz_stupaca = [c for c in ["datum", "dan", "voda_l", "cardio_tip", "cardio_vrijeme", "dan_status"] if c in styled_df.columns]
-        st.dataframe(styled_df[prikaz_stupaca], width='stretch')
+            cardio_tip
