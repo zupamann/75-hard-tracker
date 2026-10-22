@@ -7,7 +7,6 @@ st.set_page_config(page_title="75 Hard Pro", page_icon="⚡", layout="centered")
 
 # --- SPAJANJE NA GOOGLE SHEETS ---
 try:
-    # ⚠️ OVDJE ZALIJEPI LINK SVOJE GOOGLE TABLICE:
     SHEET_URL = "https://docs.google.com/spreadsheets/d/19un_RxpTOEhzbhaTch9uA85ZljCXyKFewpwLotx1-fs/edit?usp=sharing"
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     sh = gc.open_by_url(SHEET_URL)
@@ -338,4 +337,7 @@ with tab_povijest:
         
         styled_df = df.copy()
         if "dan_status" in styled_df.columns:
-            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if "SUCCESS" in str(
+            styled_df["dan_status"] = styled_df["dan_status"].apply(lambda x: "🟢 SUCCESS" if "SUCCESS" in str(x) else "🔴 INCOMPLETE")
+        
+        prikaz_stupaca = [c for c in ["datum", "dan", "voda_l", "cardio_tip", "cardio_vrijeme", "dan_status"] if c in styled_df.columns]
+        st.dataframe(styled_df[prikaz_stupaca], width='stretch')
