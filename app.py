@@ -49,6 +49,7 @@ for record in all_records:
         try:
             rec_date = datetime.datetime.strptime(rec_datum_str, "%Y-%m-%d").date()
             if rec_date >= BASE_START_DATE:
+                # Ako je bio neuspješan dan, idući dan kreće kao Dan 1
                 next_day = rec_date + datetime.timedelta(days=1)
                 if next_day > latest_reset_date:
                     latest_reset_date = next_day
@@ -130,6 +131,17 @@ with tab_danas:
     st.markdown(f"<h1 style='text-align: center;'>⚡ 75 HARD PRO — DAN {current_day}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
     
+    # RUČNI GUMB ZA RESET
+    if st.button("🔄 Ručno resetiraj izazov na Dan 1 (Danas)", type="secondary", width='stretch'):
+        row_reset = [today_str, 1, 0, "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "INCOMPLETE"]
+        if existing_row:
+            worksheet.update(range_name=f"A{existing_row}:R{existing_row}", values=[row_reset])
+        else:
+            worksheet.append_row(row_reset)
+        st.cache_data.clear()
+        st.warning("Izazov je ručno resetiran na Dan 1!")
+        st.rerun()
+
     if START_DATE > BASE_START_DATE:
         st.info(f"🔄 Izazov je automatski resetiran na Dan 1 dana {START_DATE.strftime('%d.%m.%Y.')} zbog neuspješnog dana u povijesti.")
         
@@ -255,7 +267,6 @@ with tab_danas:
     p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
     p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
 
-    # POPRAVLJEN UVJET: Neto kalorije moraju biti manje od 1900 kcal
     prehrana_ok = neto_kcal < 1900 and p_kcal > 0
     if prehrana_ok:
         st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Prehrana status: PROLAZ (Neto: {neto_kcal} kcal < 1900)</span>", unsafe_allow_html=True)
@@ -306,11 +317,13 @@ with tab_danas:
             worksheet.append_row(row_data)
             
         st.cache_data.clear()
+        
         if izazov_prolaz:
             st.balloons()
             st.success("Dan spremljen kao SUCCESS! 🔥")
         else:
-            st.warning("Podaci spremljeni, ali dan ima status INCOMPLETE.")
+            st.error("Dan je spremljen kao INCOMPLETE. Izazov je automatski resetiran na Dan 1!")
+            st.rerun()
 
 # ==========================================
 # 📊 TAB 2: POVIJEST & ANALITIKA
