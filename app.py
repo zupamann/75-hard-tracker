@@ -37,7 +37,7 @@ all_records = get_cached_records()
 today = datetime.date.today()
 now = datetime.datetime.now()
 
-# --- POBOLJŠANI AUTOMATSKI RESET: Pronalaženje ZADNJEG INCOMPLETE dana ---
+# --- AUTOMATSKI RESET: Pronalaženje ZADNJEG INCOMPLETE dana ---
 latest_incomplete_date = None
 
 for record in all_records:
@@ -52,9 +52,15 @@ for record in all_records:
         except:
             pass
 
-# Ako postoji neuspješan dan u bazi, Dan 1 počinje DAN NAKON tog neuspješnog dana
-if latest_incomplete_date:
-    START_DATE = latest_incomplete_date + datetime.timedelta(days=1)
+# Izračun početnog datuma (START_DATE)
+if "manual_reset_date" in st.session_state:
+    START_DATE = st.session_state["manual_reset_date"]
+elif latest_incomplete_date:
+    # Ako je neuspjeli dan bio DANAS, onda je danas Dan 1
+    if latest_incomplete_date == today:
+        START_DATE = today
+    else:
+        START_DATE = latest_incomplete_date + datetime.timedelta(days=1)
 else:
     START_DATE = datetime.date(2026, 10, 22)
 
@@ -132,19 +138,23 @@ with tab_danas:
     st.markdown(f"<h1 style='text-align: center;'>⚡ 75 HARD PRO — DAN {current_day}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
     
-    # RUČNI GUMB ZA RESET
+    # RUČNI GUMB ZA RESET - ODMAH POSTAVLJA DANAS NA DAN 1
     if st.button("🔄 Ručno resetiraj izazov na Dan 1 (Danas)", type="secondary", width='stretch'):
-        row_reset = [today_str, 1, 0, "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "INCOMPLETE"]
+        row_reset = [today_str, 1, 0.0, "", "", "", "", 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0, "INCOMPLETE"]
         if existing_row:
             worksheet.update(range_name=f"A{existing_row}:R{existing_row}", values=[row_reset])
         else:
             worksheet.append_row(row_reset)
+            
+        st.session_state["manual_reset_date"] = today
+        st.session_state["voda_session"] = 0.0
+        st.session_state["cardio_list"] = []
         st.cache_data.clear()
-        st.warning("Izazov je ručno resetiran na Dan 1!")
+        st.warning("Izazov je uspješno resetiran na Dan 1!")
         st.rerun()
 
     if latest_incomplete_date:
-        st.info(f"🔄 Izazov je resetiran. Dan 1 je krenuo od {START_DATE.strftime('%d.%m.%Y.')} (nakon neuspjeha na datum {latest_incomplete_date.strftime('%d.%m.%Y.')}).")
+        st.info(f"ℹ️ Službeni početak izazova (Dan 1): {START_DATE.strftime('%d.%m.%Y.')}")
         
     st.write("---")
 
@@ -323,7 +333,9 @@ with tab_danas:
             st.balloons()
             st.success("Dan spremljen kao SUCCESS! 🔥")
         else:
-            st.error("Dan je spremljen kao INCOMPLETE. Izazov je automatski resetiran na Dan 1!")
+            # Ako je spremljen INCOMPLETE, odmah postavi današnji dan kao novi START_DATE
+            st.session_state["manual_reset_date"] = today + datetime.timedelta(days=1)
+            st.error("Dan je spremljen kao INCOMPLETE. Izazov je resetiran na Dan 1!")
             st.rerun()
 
 # ==========================================
