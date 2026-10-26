@@ -37,9 +37,8 @@ all_records = get_cached_records()
 today = datetime.date.today()
 now = datetime.datetime.now()
 
-# --- AUTOMATSKI RESET NA DAN 1 AKO JE BILO NEUSPJEŠNIH DANA ---
-BASE_START_DATE = datetime.date(2026, 10, 22)
-latest_reset_date = BASE_START_DATE
+# --- POBOLJŠANI AUTOMATSKI RESET: Pronalaženje ZADNJEG INCOMPLETE dana ---
+latest_incomplete_date = None
 
 for record in all_records:
     rec_status = str(record.get("dan_status", "")).upper()
@@ -48,15 +47,17 @@ for record in all_records:
     if "INCOMPLETE" in rec_status and rec_datum_str:
         try:
             rec_date = datetime.datetime.strptime(rec_datum_str, "%Y-%m-%d").date()
-            if rec_date >= BASE_START_DATE:
-                # Ako je bio neuspješan dan, idući dan kreće kao Dan 1
-                next_day = rec_date + datetime.timedelta(days=1)
-                if next_day > latest_reset_date:
-                    latest_reset_date = next_day
+            if latest_incomplete_date is None or rec_date > latest_incomplete_date:
+                latest_incomplete_date = rec_date
         except:
             pass
 
-START_DATE = latest_reset_date
+# Ako postoji neuspješan dan u bazi, Dan 1 počinje DAN NAKON tog neuspješnog dana
+if latest_incomplete_date:
+    START_DATE = latest_incomplete_date + datetime.timedelta(days=1)
+else:
+    START_DATE = datetime.date(2026, 10, 22)
+
 current_day = (today - START_DATE).days + 1
 if current_day < 1:
     current_day = 1
@@ -142,8 +143,8 @@ with tab_danas:
         st.warning("Izazov je ručno resetiran na Dan 1!")
         st.rerun()
 
-    if START_DATE > BASE_START_DATE:
-        st.info(f"🔄 Izazov je automatski resetiran na Dan 1 dana {START_DATE.strftime('%d.%m.%Y.')} zbog neuspješnog dana u povijesti.")
+    if latest_incomplete_date:
+        st.info(f"🔄 Izazov je resetiran. Dan 1 je krenuo od {START_DATE.strftime('%d.%m.%Y.')} (nakon neuspjeha na datum {latest_incomplete_date.strftime('%d.%m.%Y.')}).")
         
     st.write("---")
 
