@@ -37,33 +37,8 @@ all_records = get_cached_records()
 today = datetime.date.today()
 now = datetime.datetime.now()
 
-# --- AUTOMATSKI RESET: Pronalaženje ZADNJEG INCOMPLETE dana ---
-latest_incomplete_date = None
-
-for record in all_records:
-    rec_status = str(record.get("dan_status", "")).upper()
-    rec_datum_str = str(record.get("datum", ""))
-    
-    if "INCOMPLETE" in rec_status and rec_datum_str:
-        try:
-            rec_date = datetime.datetime.strptime(rec_datum_str, "%Y-%m-%d").date()
-            if latest_incomplete_date is None or rec_date > latest_incomplete_date:
-                latest_incomplete_date = rec_date
-        except:
-            pass
-
-# Izračun početnog datuma (START_DATE)
-if "manual_reset_date" in st.session_state:
-    START_DATE = st.session_state["manual_reset_date"]
-elif latest_incomplete_date:
-    # Ako je neuspjeli dan bio DANAS, onda je danas Dan 1
-    if latest_incomplete_date == today:
-        START_DATE = today
-    else:
-        START_DATE = latest_incomplete_date + datetime.timedelta(days=1)
-else:
-    START_DATE = datetime.date(2026, 10, 27)
-
+# --- LOGIKA DATUMA (75 HARD - FIKSNI POČETAK BEZ RESTARTA) ---
+START_DATE = datetime.date(2026, 10, 22)
 current_day = (today - START_DATE).days + 1
 if current_day < 1:
     current_day = 1
@@ -137,25 +112,6 @@ if "cardio_list" not in st.session_state:
 with tab_danas:
     st.markdown(f"<h1 style='text-align: center;'>⚡ 75 HARD PRO — DAN {current_day}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center; color: gray;'>Datum: {today.strftime('%d.%m.%Y.')}</p>", unsafe_allow_html=True)
-    
-    # RUČNI GUMB ZA RESET - ODMAH POSTAVLJA DANAS NA DAN 1
-    if st.button("🔄 Ručno resetiraj izazov na Dan 1 (Danas)", type="secondary", width='stretch'):
-        row_reset = [today_str, 1, 0.0, "", "", "", "", 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0, "INCOMPLETE"]
-        if existing_row:
-            worksheet.update(range_name=f"A{existing_row}:R{existing_row}", values=[row_reset])
-        else:
-            worksheet.append_row(row_reset)
-            
-        st.session_state["manual_reset_date"] = today
-        st.session_state["voda_session"] = 0.0
-        st.session_state["cardio_list"] = []
-        st.cache_data.clear()
-        st.warning("Izazov je uspješno resetiran na Dan 1!")
-        st.rerun()
-
-    if latest_incomplete_date:
-        st.info(f"ℹ️ Službeni početak izazova (Dan 1): {START_DATE.strftime('%d.%m.%Y.')}")
-        
     st.write("---")
 
     # 🔥 NNN / STREAK TRACKER SEKCIJA
@@ -251,18 +207,19 @@ with tab_danas:
 
     st.write("---")
 
-    # 3. SNAGA SEKCIJA
-    st.markdown("### 🏋️‍♂️ 3. Trening Snage (2 od 3 za prolaz)")
+    # 3. SNAGA SEKCIJA (TERETANA ILI OBA SKLEKOVI + PLANK)
+    st.markdown("### 🏋️‍♂️ 3. Trening Snage (Teretana ILI Sklekovi + Plank)")
     s_teretana = st.number_input("Teretana - Vrijeme (min):", min_value=0, max_value=180, value=int(current_data.get("snaga_teretana_min", 0)))
     s_sklekovi = st.number_input("Sklekovi - Količina (kom):", min_value=0, max_value=500, value=int(current_data.get("snaga_sklekovi_kom", 0)))
     s_plank = st.number_input("Plank - Vrijeme (min):", min_value=0.0, max_value=60.0, step=0.5, value=float(current_data.get("snaga_plank_min", 0.0)))
 
-    uvjeti_snage = sum([1 for x in [s_teretana, s_sklekovi, s_plank] if x > 0])
-    snaga_ok = uvjeti_snage >= 2
+    # Uvjet: Teretana sama dovoljna, ILI napravljeni i sklekovi i plank
+    snaga_ok = (s_teretana > 0) or (s_sklekovi > 0 and s_plank > 0)
+    
     if snaga_ok:
-        st.markdown(f"<span style='color:#28a745; font-weight:bold;'>🟢 Snaga status: GOTOVO ({uvjeti_snage}/3 ispunjeno)</span>", unsafe_allow_html=True)
+        st.markdown("<span style='color:#28a745; font-weight:bold;'>🟢 Snaga status: GOTOVO</span>", unsafe_allow_html=True)
     else:
-        st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>🔴 Snaga status: U TIJEKU ({uvjeti_snage}/3 ispunjeno, trebaju ti barem 2)</span>", unsafe_allow_html=True)
+        st.markdown("<span style='color:#dc3545; font-weight:bold;'>🔴 Snaga status: U TIJEKU (Trebaju ti: Teretana ILI oba: sklekovi + plank)</span>", unsafe_allow_html=True)
 
     st.write("---")
 
@@ -276,7 +233,7 @@ with tab_danas:
     
     p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
     p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
-    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_kreatin", 0)))
+    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
 
     prehrana_ok = neto_kcal < 1900 and p_kcal > 0
     if prehrana_ok:
@@ -333,10 +290,7 @@ with tab_danas:
             st.balloons()
             st.success("Dan spremljen kao SUCCESS! 🔥")
         else:
-            # Ako je spremljen INCOMPLETE, odmah postavi današnji dan kao novi START_DATE
-            st.session_state["manual_reset_date"] = today + datetime.timedelta(days=1)
-            st.error("Dan je spremljen kao INCOMPLETE. Izazov je resetiran na Dan 1!")
-            st.rerun()
+            st.warning("Podaci spremljeni! Dan ima status INCOMPLETE.")
 
 # ==========================================
 # 📊 TAB 2: POVIJEST & ANALITIKA
