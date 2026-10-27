@@ -233,7 +233,7 @@ with tab_danas:
     
     p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
     p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
-    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
+    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_kreatin", 0)))
 
     prehrana_ok = neto_kcal < 1900 and p_kcal > 0
     if prehrana_ok:
