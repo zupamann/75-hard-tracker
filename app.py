@@ -37,7 +37,7 @@ all_records = get_cached_records()
 today = datetime.date.today()
 now = datetime.datetime.now()
 
-# --- LOGIKA DATUMA (75 HARD - FIKSNI POČETAK BEZ RESTARTA) ---
+# --- LOGIKA DATUMA (75 HARD) ---
 START_DATE = datetime.date(2026, 10, 22)
 current_day = (today - START_DATE).days + 1
 if current_day < 1:
@@ -105,6 +105,13 @@ if "cardio_list" not in st.session_state:
                 st.session_state["cardio_list"].append({"tip": t, "min": m, "avg": a, "max": mx})
         except:
             pass
+
+# Sigurno dohvaćanje potrošenih kalorija
+potroseno_val = current_data.get("hrana_potroseno_kcal", 0)
+try:
+    init_potroseno = int(potroseno_val) if potroseno_val != "" else 0
+except:
+    init_potroseno = 0
 
 # ==========================================
 # 🟢 TAB 1: DANAS
@@ -225,7 +232,7 @@ with tab_danas:
     # 4. PREHRANA SEKCIJA (NETO KALORIJE < 1900)
     st.markdown("### 🥩 4. Prehrana & Suplementacija")
     p_kcal = st.number_input("Unesene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_kcal", 0)))
-    p_potroseno = st.number_input("Potrošene Kalorije (kcal):", min_value=0, max_value=10000, value=int(current_data.get("hrana_potroseno_kcal", 0)))
+    p_potroseno = st.number_input("Potrošene Kalorije (kcal):", min_value=0, max_value=10000, value=init_potroseno, key="potroseno_input")
     
     neto_kcal = p_kcal - p_potroseno
     st.metric(label="Neto Kalorije (Unesene - Potrošene):", value=f"{neto_kcal} kcal", delta=f"{1900 - neto_kcal} kcal do gornje granice (1900)")
@@ -257,7 +264,6 @@ with tab_danas:
         cardio_avg_str = " | ".join([str(x["avg"]) for x in st.session_state["cardio_list"]])
         cardio_max_str = " | ".join([str(x["max"]) for x in st.session_state["cardio_list"]])
         
-        # POREDAK U TAVELU PRILAGOĐEN TVOJOJ GOOGLE TABLICI
         row_data = [
             today_str,
             current_day,
