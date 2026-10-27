@@ -62,7 +62,7 @@ elif latest_incomplete_date:
     else:
         START_DATE = latest_incomplete_date + datetime.timedelta(days=1)
 else:
-    START_DATE = datetime.date(2026, 10, 22)
+    START_DATE = datetime.date(2026, 10, 27)
 
 current_day = (today - START_DATE).days + 1
 if current_day < 1:
