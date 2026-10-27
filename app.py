@@ -80,7 +80,7 @@ if not current_data:
     current_data = {
         "voda_l": 0.0, "cardio_tip": "", "cardio_vrijeme": "", "cardio_avg_brzina": "", "cardio_max_brzina": "",
         "snaga_teretana_min": 0, "snaga_sklekovi_kom": 0, "snaga_plank_min": 0.0,
-        "hrana_kcal": 0, "hrana_potroseno_kcal": 0, "hrana_secer": 0, "hrana_protein": 0, "hrana_kreatin": 0,
+        "hrana_kcal": 0, "hrana_secer": 0, "hrana_protein": 0, "hrana_kreatin": 0, "hrana_potroseno_kcal": 0,
         "citanje": 0, "slika": 0
     }
 
@@ -207,13 +207,12 @@ with tab_danas:
 
     st.write("---")
 
-    # 3. SNAGA SEKCIJA (TERETANA ILI OBA SKLEKOVI + PLANK)
+    # 3. SNAGA SEKCIJA
     st.markdown("### 🏋️‍♂️ 3. Trening Snage (Teretana ILI Sklekovi + Plank)")
     s_teretana = st.number_input("Teretana - Vrijeme (min):", min_value=0, max_value=180, value=int(current_data.get("snaga_teretana_min", 0)))
     s_sklekovi = st.number_input("Sklekovi - Količina (kom):", min_value=0, max_value=500, value=int(current_data.get("snaga_sklekovi_kom", 0)))
     s_plank = st.number_input("Plank - Vrijeme (min):", min_value=0.0, max_value=60.0, step=0.5, value=float(current_data.get("snaga_plank_min", 0.0)))
 
-    # Uvjet: Teretana sama dovoljna, ILI napravljeni i sklekovi i plank
     snaga_ok = (s_teretana > 0) or (s_sklekovi > 0 and s_plank > 0)
     
     if snaga_ok:
@@ -233,7 +232,7 @@ with tab_danas:
     
     p_secer = st.number_input("Šećer (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_secer", 0)))
     p_protein = st.number_input("Protein (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_protein", 0)))
-    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=500, value=int(current_data.get("hrana_kreatin", 0)))
+    p_kreatin = st.number_input("Kreatin (g):", min_value=0, max_value=50, value=int(current_data.get("hrana_kreatin", 0)))
 
     prehrana_ok = neto_kcal < 1900 and p_kcal > 0
     if prehrana_ok:
@@ -258,6 +257,7 @@ with tab_danas:
         cardio_avg_str = " | ".join([str(x["avg"]) for x in st.session_state["cardio_list"]])
         cardio_max_str = " | ".join([str(x["max"]) for x in st.session_state["cardio_list"]])
         
+        # POREDAK U TAVELU PRILAGOĐEN TVOJOJ GOOGLE TABLICI
         row_data = [
             today_str,
             current_day,
@@ -270,13 +270,13 @@ with tab_danas:
             s_sklekovi,
             s_plank,
             p_kcal,
-            p_potroseno,
             p_secer,
             p_protein,
             p_kreatin,
             1 if citanje else 0,
             1 if slika else 0,
-            status_dana
+            status_dana,
+            p_potroseno
         ]
         
         if existing_row:
