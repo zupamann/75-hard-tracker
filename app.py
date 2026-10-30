@@ -38,7 +38,7 @@ today = datetime.date.today()
 now = datetime.datetime.now()
 
 # --- LOGIKA DATUMA (75 HARD) ---
-START_DATE = datetime.date(2026, 10, 29)
+START_DATE = datetime.date(2026, 10, 30)
 current_day = (today - START_DATE).days + 1
 if current_day < 1:
     current_day = 1
